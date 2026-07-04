@@ -40,10 +40,14 @@ def _require_env(name: str) -> str:
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # --- Nguồn dữ liệu nội dung bài báo (metadata: title/summary/content/url...) ---
-# Hiện tại vẫn là CSV đọc vào RAM (xem app/database/news_repository.py).
-# Thiết kế theo repository pattern nên có thể thay bằng Postgres/MySQL sau
-# này mà không phải sửa service/router — chỉ cần viết lại repository.
+# ĐÃ CHUYỂN sang Postgres (Neon) — xem app/database/postgres_news_repository.py.
+# CSV_PATH giữ lại (legacy) cho app/database/news_repository.py (bản CSV cũ),
+# phòng khi cần fallback/so sánh cục bộ, không còn được main.py sử dụng.
 CSV_PATH = os.path.join(BASE_DIR, "data", "cleaned_news.csv")
+
+# Connection string Postgres (Neon), dạng:
+# postgresql://user:password@host/dbname?sslmode=require
+DATABASE_URL = _require_env("DATABASE_URL")
 
 # --- CORS ---
 ALLOWED_ORIGINS = [
