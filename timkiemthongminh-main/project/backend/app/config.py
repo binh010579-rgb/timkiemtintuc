@@ -64,6 +64,12 @@ DEFAULT_PAGE_LIMIT = 10
 # này. Model multilingual, hỗ trợ tốt tiếng Việt.
 HF_API_TOKEN = _require_env("HF_API_TOKEN")
 HF_EMBEDDING_MODEL = os.environ.get("HF_EMBEDDING_MODEL", "BAAI/bge-m3")
+
+# Model cross-encoder dùng để RERANK (xem app/services/rerank_service.py).
+# Mặc định BAAI/bge-reranker-v2-m3 — cùng họ BGE với model embedding,
+# multilingual, hỗ trợ tốt tiếng Việt. KHÔNG load model này cục bộ, chỉ
+# gọi qua HF Inference API (pipeline text-classification).
+HF_RERANKER_MODEL = os.environ.get("HF_RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
 # LƯU Ý: HF đã khai tử hoàn toàn domain "api-inference.huggingface.co"
 # (không còn resolve DNS -> lỗi "No address associated with hostname").
 # Endpoint mới là "router.huggingface.co" (Inference Providers router).
