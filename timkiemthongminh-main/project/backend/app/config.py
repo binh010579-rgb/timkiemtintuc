@@ -9,6 +9,21 @@ này (fail fast khi server khởi động, thay vì lỗi mập mờ lúc có re
 
 import os
 
+try:
+    # Chỉ có tác dụng khi chạy LOCAL và có file .env trong thư mục backend/.
+    # Trên production (Render), Anthropic/Render tự bơm biến môi trường thật
+    # vào process trước khi Python chạy, nên `override=False` đảm bảo KHÔNG
+    # bao giờ ghi đè lên giá trị thật đã có sẵn trong môi trường production —
+    # load_dotenv() ở đây chỉ điền vào chỗ trống (fallback cho local dev).
+    from dotenv import load_dotenv
+
+    load_dotenv(override=False)
+except ImportError:
+    # python-dotenv không có trong requirements.txt của backend runtime
+    # (chỉ cần cho local dev) — nếu chưa cài, coi như không có .env,
+    # dựa hoàn toàn vào biến môi trường hệ thống (đúng hành vi production).
+    pass
+
 
 def _require_env(name: str) -> str:
     value = os.environ.get(name, "").strip()
@@ -49,11 +64,8 @@ DEFAULT_PAGE_LIMIT = 10
 # này. Model multilingual, hỗ trợ tốt tiếng Việt.
 HF_API_TOKEN = _require_env("HF_API_TOKEN")
 HF_EMBEDDING_MODEL = os.environ.get("HF_EMBEDDING_MODEL", "BAAI/bge-m3")
-# LƯU Ý: HF đã khai tử hoàn toàn domain "api-inference.huggingface.co"
-# (không còn resolve DNS -> lỗi "No address associated with hostname").
-# Endpoint mới là "router.huggingface.co" (Inference Providers router).
 HF_API_BASE_URL = os.environ.get(
-    "HF_API_BASE_URL", "https://router.huggingface.co/hf-inference"
+    "HF_API_BASE_URL", "https://api-inference.huggingface.co/pipeline/feature-extraction"
 )
 HF_API_TIMEOUT_SECONDS = float(os.environ.get("HF_API_TIMEOUT_SECONDS", "30"))
 HF_API_MAX_RETRIES = int(os.environ.get("HF_API_MAX_RETRIES", "3"))
