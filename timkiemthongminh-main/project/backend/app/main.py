@@ -32,7 +32,7 @@ from app.api import health, news, search
 from app.config import ALLOWED_ORIGINS, APP_VERSION, QDRANT_VECTOR_SIZE
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
-from app.database.news_repository import news_repository
+from app.database.postgres_news_repository import news_repository
 from app.database.qdrant_client import qdrant_store
 from app.middleware.logging_middleware import RequestLoggingMiddleware
 from app.services.embedding_service import embedding_service
