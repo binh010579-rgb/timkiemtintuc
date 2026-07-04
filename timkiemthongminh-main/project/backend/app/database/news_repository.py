@@ -65,22 +65,20 @@ class NewsRepository:
         self.df: pd.DataFrame | None = None
         self.loaded: bool = False
 
-    def load(self, csv_path: str = CSV_PATH) -> None:
-        if not os.path.exists(csv_path):
-            raise FileNotFoundError(
-                f"Không tìm thấy file dữ liệu tại: {csv_path}. "
-                "Đảm bảo file đã được đặt đúng vị trí backend/data/."
-            )
-
-        df = pd.read_csv(csv_path)
-
+    def _finalize(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Xử lý CHUNG cho mọi nguồn dữ liệu thô (CSV hoặc Postgres), miễn là
+        `df` đầu vào đã có đủ REQUIRED_COLUMNS với đúng tên cột gốc
+        (nguon, tieu_de, ngay_dang, tac_gia, summary, so_binh_luan, link,
+        noi_dung tuỳ chọn). Trả về DataFrame đã sẵn sàng phục vụ request:
+        có cột `id` (hash ổn định từ URL), `_search_blob`, kiểu dữ liệu
+        chuẩn hoá.
+        """
         missing = [c for c in REQUIRED_COLUMNS if c not in df.columns]
         if missing:
             raise ValueError(f"Dữ liệu thiếu các cột bắt buộc: {missing}")
 
         df = df.reset_index(drop=True)
-        if "link" not in df.columns:
-            raise ValueError("Dữ liệu thiếu cột 'link' — cần để sinh ID ổn định cho từng bài.")
         # Loại URL trùng lặp TRƯỚC khi sinh ID (giữ dòng đầu tiên) — 2 dòng
         # cùng URL sẽ cho ra cùng 1 ID (hash), gây lỗi tra cứu get_by_ids().
         before = len(df)
@@ -89,7 +87,7 @@ class NewsRepository:
             import logging
 
             logging.getLogger(__name__).warning(
-                "Đã loại %d dòng trùng URL trong cleaned_news.csv.", before - len(df)
+                "Đã loại %d dòng trùng URL trong dữ liệu nguồn.", before - len(df)
             )
         df.insert(0, "id", df["link"].astype(str).map(stable_id_from_url))
 
@@ -106,7 +104,17 @@ class NewsRepository:
             df["tieu_de"].fillna("") + " " + df["summary"].fillna("")
         ).map(strip_accents_lower)
 
-        self.df = df
+        return df
+
+    def load(self, csv_path: str = CSV_PATH) -> None:
+        if not os.path.exists(csv_path):
+            raise FileNotFoundError(
+                f"Không tìm thấy file dữ liệu tại: {csv_path}. "
+                "Đảm bảo file đã được đặt đúng vị trí backend/data/."
+            )
+
+        df = pd.read_csv(csv_path)
+        self.df = self._finalize(df)
         self.loaded = True
 
     def ensure_loaded(self) -> pd.DataFrame:
