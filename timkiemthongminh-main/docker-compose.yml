@@ -1,0 +1,20 @@
+services:
+  backend:
+    build:
+      context: ./project/backend
+      dockerfile: Dockerfile
+    image: news-semantic-search-backend:local
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./project/backend/.env
+    environment:
+      PORT: "8000"
+    restart: unless-stopped
+    # Qdrant Cloud + Hugging Face Inference API đều là dịch vụ bên ngoài —
+    # không có service Qdrant/embedding nào chạy local trong file này.
+
+# Frontend KHÔNG chạy qua Docker trong dev — dùng Vite dev server trực
+# tiếp (nhanh hơn nhiều so với build lại image mỗi lần sửa code):
+#
+#   cd project/frontend && npm install && npm run dev

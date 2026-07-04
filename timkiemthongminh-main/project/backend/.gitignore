@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+venv/
+.venv/
+.env
+data/embedding_state.json
+data/build_vectors_checkpoint.json

@@ -1,0 +1,12 @@
+# Chỉ cần cài file này (CÙNG requirements-build.txt) khi chạy
+# build_vectors.py với --mode local.
+# Backend runtime (app/main.py, requirements.txt) KHÔNG cần và KHÔNG
+# import các gói này — giữ server nhẹ, không torch/sentence-transformers.
+#
+# Cài:
+#   pip install -r requirements-build.txt -r requirements-build-local.txt
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1
+
+sentence-transformers==3.3.1

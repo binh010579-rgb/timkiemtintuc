@@ -1,0 +1,10 @@
+# Dependency cho build_vectors.py (script offline) — KHÔNG phải backend
+# runtime. Cần cho CẢ 2 mode (--mode hf và --mode local).
+#
+# Cài (mode hf, mặc định — không cần model local):
+#   pip install -r requirements.txt -r requirements-build.txt
+#
+# Cài thêm nếu dùng --mode local:
+#   pip install -r requirements-build-local.txt
+
+tqdm==4.67.1
