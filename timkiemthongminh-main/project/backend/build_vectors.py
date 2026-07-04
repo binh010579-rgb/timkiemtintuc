@@ -255,6 +255,17 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Ép encode lại TOÀN BỘ, kể cả ID đã có sẵn trên Qdrant Cloud.",
     )
+    parser.add_argument(
+        "--recreate",
+        action="store_true",
+        help=(
+            "XOÁ SẠCH collection hiện tại trên Qdrant Cloud rồi tạo lại trống, "
+            "trước khi encode lại toàn bộ từ đầu. Dùng đúng 1 LẦN khi đổi cách "
+            "sinh ID (ví dụ: chuyển từ ID theo vị trí dòng sang ID theo hash URL) "
+            "-- lúc đó ID cũ trên Qdrant không còn khớp với ID mới, phải xoá "
+            "sạch chứ không thể chỉ 'thêm mới'."
+        ),
+    )
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Log chi tiết từng batch (DEBUG level)."
@@ -279,7 +290,19 @@ def main() -> int:
 
     qdrant_store.connect()
 
-    if args.force:
+    if args.recreate:
+        from app.config import QDRANT_VECTOR_SIZE
+
+        logger.warning(
+            "--recreate: XOÁ SẠCH collection '%s' hiện tại trên Qdrant Cloud rồi "
+            "tạo lại trống (dim=%d)...",
+            qdrant_store.collection_name,
+            QDRANT_VECTOR_SIZE,
+        )
+        qdrant_store.recreate_collection(vector_size=QDRANT_VECTOR_SIZE)
+        logger.info("Đã xoá + tạo lại collection trống — sẽ encode lại TOÀN BỘ %d bài.", len(all_ids))
+        ids_to_process = set(all_ids)
+    elif args.force:
         logger.info("--force: sẽ encode lại TOÀN BỘ %d bài, kể cả ID đã có sẵn.", len(all_ids))
         ids_to_process = set(all_ids)
     else:
