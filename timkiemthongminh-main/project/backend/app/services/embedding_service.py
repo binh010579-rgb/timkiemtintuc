@@ -45,7 +45,9 @@ class EmbeddingService:
     """
 
     def __init__(self) -> None:
-        self._endpoint = f"{HF_API_BASE_URL}/{HF_EMBEDDING_MODEL}"
+        # Endpoint router mới của HF (thay cho api-inference.huggingface.co
+        # đã bị khai tử): https://router.huggingface.co/hf-inference/models/{model}/pipeline/feature-extraction
+        self._endpoint = f"{HF_API_BASE_URL}/models/{HF_EMBEDDING_MODEL}/pipeline/feature-extraction"
         self._headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
 
     def _call_api(self, inputs: list[str]) -> list[list[float]]:
