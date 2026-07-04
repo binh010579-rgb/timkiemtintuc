@@ -203,15 +203,18 @@ class QdrantVectorStore:
 
         Trả về list[(article_id, score)] giảm dần theo score.
         """
-        hits = self._client().search(
+        # LƯU Ý: `.search()` đã bị gỡ bỏ khỏi qdrant-client bản mới (thay
+        # bằng `.query_points()` từ client >= 1.7.1). `.search()` gọi ra
+        # sẽ raise AttributeError ở các bản client hiện tại.
+        response = self._client().query_points(
             collection_name=self.collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k,
             score_threshold=score_threshold,
             with_payload=False,
             with_vectors=False,
         )
-        return [(int(hit.id), float(hit.score)) for hit in hits]
+        return [(int(hit.id), float(hit.score)) for hit in response.points]
 
 
 # Instance toàn cục duy nhất.
