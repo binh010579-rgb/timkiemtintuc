@@ -15,6 +15,7 @@ Cloud (xem `qdrant_client.py`), repository này chỉ giữ metadata/nội dung.
 
 from __future__ import annotations
 
+import hashlib
 import os
 import unicodedata
 
@@ -23,6 +24,27 @@ import pandas as pd
 from app.config import CSV_PATH
 
 REQUIRED_COLUMNS = ["nguon", "tieu_de", "ngay_dang", "tac_gia", "summary", "so_binh_luan", "link"]
+
+
+def stable_id_from_url(url: str) -> int:
+    """
+    Sinh ID ỔN ĐỊNH cho 1 bài báo dựa trên URL (`link`) — KHÔNG dựa vào vị
+    trí dòng trong CSV.
+
+    LÝ DO QUAN TRỌNG: nếu ID tính theo vị trí dòng (row index), mỗi khi
+    CSV thay đổi thứ tự (thêm bài mới, sắp xếp lại, xoá trùng...) thì toàn
+    bộ ánh xạ ID -> nội dung bị lệch so với vector đã upsert từ trước lên
+    Qdrant Cloud (build_vectors.py dùng CHÍNH cột `id` này để gắn ID cho
+    vector) -> Qdrant trả về đúng vector gần nghĩa nhất, nhưng backend lại
+    hydrate NHẦM nội dung của 1 bài khác đang tình cờ nằm ở vị trí đó lúc
+    server khởi động. Dùng hash cố định của URL đảm bảo cùng 1 bài báo
+    luôn nhận đúng 1 ID, dù CSV có thay đổi bao nhiêu lần.
+
+    Lấy 62 bit đầu của SHA-256(url) làm ID dương (int64) — đủ để tránh
+    va chạm (collision) với hàng chục triệu bài báo trở lên.
+    """
+    digest = hashlib.sha256(url.strip().encode("utf-8")).hexdigest()
+    return int(digest[:15], 16)  # 15 hex digit = 60 bit, vừa trong int64 dương
 
 
 def strip_accents_lower(text: str) -> str:
@@ -57,7 +79,19 @@ class NewsRepository:
             raise ValueError(f"Dữ liệu thiếu các cột bắt buộc: {missing}")
 
         df = df.reset_index(drop=True)
-        df.insert(0, "id", df.index + 1)
+        if "link" not in df.columns:
+            raise ValueError("Dữ liệu thiếu cột 'link' — cần để sinh ID ổn định cho từng bài.")
+        # Loại URL trùng lặp TRƯỚC khi sinh ID (giữ dòng đầu tiên) — 2 dòng
+        # cùng URL sẽ cho ra cùng 1 ID (hash), gây lỗi tra cứu get_by_ids().
+        before = len(df)
+        df = df.drop_duplicates(subset="link", keep="first").reset_index(drop=True)
+        if len(df) < before:
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "Đã loại %d dòng trùng URL trong cleaned_news.csv.", before - len(df)
+            )
+        df.insert(0, "id", df["link"].astype(str).map(stable_id_from_url))
 
         df["so_binh_luan"] = (
             pd.to_numeric(df["so_binh_luan"], errors="coerce").round().astype("Int64")
