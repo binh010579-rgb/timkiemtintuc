@@ -2,7 +2,7 @@
 """
 Script OFFLINE, ĐỘC LẬP HOÀN TOÀN với backend runtime (`app/main.py`).
 
-Mục đích DUY NHẤT: đọc `data/cleaned_news.csv`, sinh embedding cho
+Mục đích DUY NHẤT: đọc bảng `news` trên Postgres (Neon), sinh embedding cho
 title+summary, rồi upload (upsert) vector lên Qdrant Cloud.
 
     KHÔNG được import bởi `app/main.py`.
@@ -51,7 +51,7 @@ import time
 from tqdm import tqdm
 
 from app.config import HF_EMBEDDING_MODEL
-from app.database.news_repository import NewsRepository
+from app.database.postgres_news_repository import PostgresNewsRepository
 from app.database.qdrant_client import qdrant_store
 
 DEFAULT_BATCH_SIZE = 32
@@ -280,11 +280,11 @@ def main() -> int:
 
     logger.info("=== build_vectors.py bắt đầu (mode=%s) ===", args.mode)
 
-    logger.info("Đang đọc dữ liệu từ cleaned_news.csv...")
-    repo = NewsRepository()
+    logger.info("Đang đọc dữ liệu từ Postgres (Neon)...")
+    repo = PostgresNewsRepository()
     repo.load()
     df = repo.df
-    logger.info("Đã đọc %d bài báo trong CSV.", len(df))
+    logger.info("Đã đọc %d bài báo trong Postgres.", len(df))
 
     all_ids = [int(x) for x in df["id"].tolist()]
 
