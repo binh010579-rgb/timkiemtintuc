@@ -49,8 +49,11 @@ DEFAULT_PAGE_LIMIT = 10
 # này. Model multilingual, hỗ trợ tốt tiếng Việt.
 HF_API_TOKEN = _require_env("HF_API_TOKEN")
 HF_EMBEDDING_MODEL = os.environ.get("HF_EMBEDDING_MODEL", "BAAI/bge-m3")
+# LƯU Ý: HF đã khai tử hoàn toàn domain "api-inference.huggingface.co"
+# (không còn resolve DNS -> lỗi "No address associated with hostname").
+# Endpoint mới là "router.huggingface.co" (Inference Providers router).
 HF_API_BASE_URL = os.environ.get(
-    "HF_API_BASE_URL", "https://api-inference.huggingface.co/pipeline/feature-extraction"
+    "HF_API_BASE_URL", "https://router.huggingface.co/hf-inference"
 )
 HF_API_TIMEOUT_SECONDS = float(os.environ.get("HF_API_TIMEOUT_SECONDS", "30"))
 HF_API_MAX_RETRIES = int(os.environ.get("HF_API_MAX_RETRIES", "3"))
