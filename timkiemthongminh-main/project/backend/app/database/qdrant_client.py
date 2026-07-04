@@ -167,6 +167,34 @@ class QdrantVectorStore:
         except Exception as exc:  # noqa: BLE001 - muốn bắt mọi lỗi để báo cáo trạng thái
             return False, str(exc)
 
+    def existing_ids(self) -> set[int]:
+        """
+        Trả về toàn bộ ID hiện đã có trong collection (dùng scroll API,
+        chỉ lấy id — KHÔNG lấy vector/payload để nhẹ và nhanh).
+
+        Dùng bởi `build_vectors.py` để biết bài nào đã upsert rồi, từ đó
+        chỉ encode + upsert các bài MỚI (id chưa có) — không cần checkpoint
+        file riêng, vì Qdrant Cloud tự là nguồn sự thật (source of truth)
+        cho những gì đã xong.
+        """
+        if not self.collection_exists():
+            return set()
+        ids: set[int] = set()
+        next_offset = None
+        client = self._client()
+        while True:
+            points, next_offset = client.scroll(
+                collection_name=self.collection_name,
+                limit=1000,
+                offset=next_offset,
+                with_payload=False,
+                with_vectors=False,
+            )
+            ids.update(int(p.id) for p in points)
+            if next_offset is None:
+                break
+        return ids
+
     def upsert(
         self,
         ids: list[int],
