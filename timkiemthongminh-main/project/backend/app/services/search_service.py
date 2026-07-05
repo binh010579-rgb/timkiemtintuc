@@ -24,6 +24,8 @@ của server request-response).
 
 from __future__ import annotations
 
+import logging
+
 import pandas as pd
 
 from app.config import SEARCH_CANDIDATE_K, SEARCH_SCORE_THRESHOLD, SEARCH_TOP_K
@@ -33,6 +35,8 @@ from app.database.qdrant_client import QdrantVectorStore
 from app.models.search import SemanticSearchResultItem
 from app.services.embedding_service import EmbeddingService
 from app.services.rerank_service import Reranker, default_reranker
+
+logger = logging.getLogger(__name__)
 
 
 def _row_to_result_item(
@@ -96,7 +100,33 @@ def search_articles(
     )  # [(article_id, score), ...]
 
     if not hits:
+        # Log để TINH CHỈNH score_threshold dựa trên dữ liệu thật, thay vì
+        # đoán mò: gọi lại KHÔNG áp threshold (chỉ lấy 1 điểm) để biết điểm
+        # cao nhất thực tế của query này là bao nhiêu — nếu nó chỉ nhỉnh
+        # hơn 1 chút so với threshold đang đặt, có thể threshold hơi chặt;
+        # nếu nó quá thấp, xác nhận query thật sự không liên quan dataset.
+        if score_threshold is not None:
+            probe = qdrant_store.search(query_vector, top_k=1, score_threshold=None)
+            if probe:
+                logger.info(
+                    "Query %r: 0 kết quả đạt threshold=%.3f (điểm cao nhất "
+                    "thực tế trong dataset chỉ %.3f).",
+                    query, score_threshold, probe[0][1],
+                )
+            else:
+                logger.info(
+                    "Query %r: Qdrant collection rỗng, không có match nào.", query
+                )
         return []
+
+    logger.info(
+        "Query %r: %d candidate qua threshold=%s — score min=%.3f, max=%.3f.",
+        query,
+        len(hits),
+        score_threshold,
+        min(score for _, score in hits),
+        max(score for _, score in hits),
+    )
 
     ids = [article_id for article_id, _ in hits]
     scores = {article_id: score for article_id, score in hits}
