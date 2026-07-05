@@ -126,10 +126,28 @@ class NewsRepository:
         return self.df
 
     def get_by_ids(self, ids: list[int]) -> list[pd.Series]:
-        """Lấy các dòng theo đúng thứ tự `ids` (giá trị cột `id`, không phải vị trí)."""
+        """
+        Lấy các dòng theo đúng thứ tự `ids` (giá trị cột `id`, không phải
+        vị trí). Nếu Qdrant trả về 1 ID không (còn) tồn tại trong dữ liệu
+        hiện tại (VD: vector "mồ côi" còn sót lại từ lần build cũ, hoặc
+        bài đã bị xoá khỏi Postgres nhưng chưa kịp xoá vector tương ứng),
+        BỎ QUA id đó thay vì crash toàn bộ request tìm kiếm.
+        """
         df = self.ensure_loaded()
         indexed = df.set_index("id", drop=False)
-        return [indexed.loc[i] for i in ids]
+        rows = []
+        for i in ids:
+            try:
+                rows.append(indexed.loc[i])
+            except KeyError:
+                import logging
+
+                logging.getLogger(__name__).warning(
+                    "ID %s từ Qdrant không tồn tại trong dữ liệu hiện tại — bỏ qua "
+                    "(có thể là vector mồ côi, cân nhắc chạy `build_vectors.py --recreate`).",
+                    i,
+                )
+        return rows
 
     def count(self) -> int:
         return len(self.ensure_loaded())
