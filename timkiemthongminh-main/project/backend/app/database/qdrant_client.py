@@ -201,21 +201,52 @@ class QdrantVectorStore:
         vectors: list[list[float]],
         payloads: list[dict] | None = None,
         batch_size: int = 128,
+        max_retries: int = QDRANT_CONNECT_MAX_RETRIES,
+        backoff_seconds: float = QDRANT_CONNECT_RETRY_BACKOFF_SECONDS,
     ) -> None:
-        """Đẩy (id, vector, payload) vào collection theo batch. Dùng bởi build_vectors.py."""
+        """
+        Đẩy (id, vector, payload) vào collection theo batch. Dùng bởi
+        build_vectors.py.
+
+        Mỗi batch con (`batch_size`) được TỰ ĐỘNG RETRY (backoff tăng dần,
+        giống `connect()`) nếu gặp lỗi mạng/timeout tạm thời (VD mạng nhà
+        chập chờn khi upload) — không cần người dùng tự chạy lại lệnh cho
+        từng lần timeout ngắn hạn. Nếu vẫn thất bại sau `max_retries` lần,
+        raise lỗi gốc như bình thường (để build_vectors.py báo lỗi và
+        người dùng có thể chạy lại lệnh sau, phần đã upsert xong không mất).
+        """
         client = self._client()
         total = len(ids)
         payloads = payloads if payloads is not None else [{} for _ in range(total)]
         for start in range(0, total, batch_size):
             end = min(start + batch_size, total)
-            client.upsert(
-                collection_name=self.collection_name,
-                points=qmodels.Batch(
-                    ids=[int(i) for i in ids[start:end]],
-                    vectors=vectors[start:end],
-                    payloads=payloads[start:end],
-                ),
-            )
+            last_error: Exception | None = None
+            for attempt in range(1, max_retries + 1):
+                try:
+                    client.upsert(
+                        collection_name=self.collection_name,
+                        points=qmodels.Batch(
+                            ids=[int(i) for i in ids[start:end]],
+                            vectors=vectors[start:end],
+                            payloads=payloads[start:end],
+                        ),
+                    )
+                    break
+                except Exception as exc:  # noqa: BLE001 - muốn bắt mọi lỗi mạng/HTTP để retry
+                    last_error = exc
+                    if attempt < max_retries:
+                        sleep_for = backoff_seconds * attempt
+                        logger.warning(
+                            "Upsert batch [%d:%d] lỗi (lần %d/%d): %s — thử lại sau %.1fs...",
+                            start, end, attempt, max_retries, exc, sleep_for,
+                        )
+                        time.sleep(sleep_for)
+                    else:
+                        logger.error(
+                            "Upsert batch [%d:%d] lỗi sau %d lần thử, bỏ cuộc: %s",
+                            start, end, max_retries, exc,
+                        )
+                        raise last_error
 
     def search(
         self,
