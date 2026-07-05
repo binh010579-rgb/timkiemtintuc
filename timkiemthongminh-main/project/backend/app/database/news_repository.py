@@ -149,6 +149,28 @@ class NewsRepository:
                 )
         return rows
 
+    def get_content_by_ids(self, ids: list[int]) -> dict[int, str | None]:
+        """
+        Lấy nội dung đầy đủ (`noi_dung`) theo id.
+
+        Bản mặc định này lấy TRỰC TIẾP từ DataFrame đang giữ trong RAM —
+        phù hợp với bản CSV (nơi cột `noi_dung` đã được nạp sẵn cùng lúc
+        với metadata). Repository nào KHÔNG giữ content trong RAM (VD:
+        `PostgresNewsRepository`, để tránh OOM với dataset lớn) PHẢI
+        override phương thức này để query content theo đúng nhu cầu.
+        """
+        df = self.ensure_loaded()
+        if "noi_dung" not in df.columns:
+            return {}
+        indexed = df.set_index("id", drop=False)
+        result: dict[int, str | None] = {}
+        for i in ids:
+            try:
+                result[i] = indexed.loc[i, "noi_dung"]
+            except KeyError:
+                result[i] = None
+        return result
+
     def count(self) -> int:
         return len(self.ensure_loaded())
 
