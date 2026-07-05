@@ -35,16 +35,25 @@ from app.services.embedding_service import EmbeddingService
 from app.services.rerank_service import Reranker, default_reranker
 
 
-def _row_to_result_item(row: pd.Series, score: float) -> SemanticSearchResultItem:
+def _row_to_result_item(
+    row: pd.Series, score: float, content_by_id: dict[int, str | None]
+) -> SemanticSearchResultItem:
     """
-    `content` lấy từ cột `noi_dung` — nội dung ĐẦY ĐỦ của bài báo, KHÔNG
-    phải `summary`. Đây là phần dùng làm context khi gửi cho AI.
+    `content` là nội dung ĐẦY ĐỦ của bài báo, KHÔNG phải `summary`. Đây là
+    phần dùng làm context khi gửi cho AI.
+
+    Với kiến trúc hiện tại (Postgres, dataset 50k+ dòng), `content` KHÔNG
+    còn nằm sẵn trong `row` (DataFrame chỉ giữ metadata trong RAM) — phải
+    lấy từ `content_by_id`, dict đã được fetch riêng theo đúng top-k id
+    (xem `NewsRepository.get_content_by_ids()`), tránh phải giữ content
+    của toàn bộ dataset trong RAM.
     """
+    article_id = int(row["id"])
     return SemanticSearchResultItem(
-        id=int(row["id"]),
+        id=article_id,
         title=row["tieu_de"],
         summary=row["summary"],
-        content=row.get("noi_dung"),
+        content=content_by_id.get(article_id),
         url=row["link"],
         image=None,
         date=row["ngay_dang"],
@@ -93,7 +102,13 @@ def search_articles(
     scores = {article_id: score for article_id, score in hits}
 
     rows = news_repository.get_by_ids(ids)
-    items = [_row_to_result_item(row, scores[int(row["id"])]) for row in rows]
+    # Fetch content ĐẦY ĐỦ chỉ cho đúng candidate_k bài này (thường 10-30
+    # bài) — không bao giờ toàn bộ dataset. Xem docstring _row_to_result_item.
+    content_by_id = news_repository.get_content_by_ids(ids)
+    items = [
+        _row_to_result_item(row, scores[int(row["id"])], content_by_id)
+        for row in rows
+    ]
 
     items = reranker.rerank(query, items)
     return items[:top_k]
