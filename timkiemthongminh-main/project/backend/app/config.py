@@ -121,7 +121,22 @@ QDRANT_CONNECT_TIMEOUT_SECONDS = float(os.environ.get("QDRANT_CONNECT_TIMEOUT_SE
 # -> hydrate content đầy đủ từ repository -> trả JSON.
 SEARCH_TOP_K = int(os.environ.get("SEARCH_TOP_K", "10"))
 
-_threshold_raw = os.environ.get("SEARCH_SCORE_THRESHOLD", "")
+_threshold_raw = os.environ.get("SEARCH_SCORE_THRESHOLD", "0.4")
+# Ngưỡng cosine similarity tối thiểu (BGE-M3, đã normalize) để 1 kết quả
+# được coi là "đủ liên quan" và trả về. KHÔNG để None/trống mặc định nữa —
+# lý do: nếu không có ngưỡng, Qdrant luôn trả về top_k điểm GẦN NHẤT hiện
+# có trong collection dù độ gần đó thực chất rất thấp (VD: query gõ không
+# dấu, hoặc query lệch hẳn chủ đề dataset) — gây ra kết quả "trớt quớt"
+# hiển thị cho người dùng thay vì báo "không tìm thấy".
+#
+# 0.4 là điểm khởi đầu hợp lý cho BGE-M3 (dựa trên phân phối cosine
+# similarity thường gặp: match tốt thường >= 0.5-0.6, match yếu/nhiễu
+# thường < 0.3), NHƯNG cần tinh chỉnh dựa trên dữ liệu thật — xem log
+# "Query %r: %d candidate, score min=...max=..." ở search_service.py sau
+# khi deploy để biết phân phối score thực tế của dataset bạn, rồi chỉnh
+# lại giá trị này qua biến môi trường SEARCH_SCORE_THRESHOLD trên Render
+# (không cần sửa code/redeploy). Đặt SEARCH_SCORE_THRESHOLD="" (chuỗi
+# rỗng) nếu muốn tắt hẳn ngưỡng lọc (quay về hành vi cũ).
 SEARCH_SCORE_THRESHOLD: float | None = float(_threshold_raw) if _threshold_raw.strip() else None
 
 # Số ứng viên lấy từ Qdrant TRƯỚC bước re-ranking (tuỳ chọn) — xem
