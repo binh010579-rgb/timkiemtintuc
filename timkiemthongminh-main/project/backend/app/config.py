@@ -59,6 +59,17 @@ ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
+# Regex bổ sung cho origin, dùng để tự động chấp nhận các domain preview
+# của Vercel (mỗi lần deploy Vercel sinh ra 1 domain preview khác nhau,
+# dạng https://<project>-<hash>-<team>.vercel.app, không thể liệt kê hết
+# trong ALLOWED_ORIGINS). Mặc định chấp nhận mọi domain con của vercel.app
+# thuộc project "timkiemtintuc"; có thể override qua biến môi trường
+# ALLOWED_ORIGIN_REGEX nếu cần siết chặt/nới lỏng hơn.
+ALLOWED_ORIGIN_REGEX = os.environ.get(
+    "ALLOWED_ORIGIN_REGEX",
+    r"^https://timkiemtintuc(-[a-z0-9]+)*\.vercel\.app$",
+)
+
 # --- Phân trang ---
 MAX_PAGE_LIMIT = 100
 DEFAULT_PAGE_LIMIT = 10
