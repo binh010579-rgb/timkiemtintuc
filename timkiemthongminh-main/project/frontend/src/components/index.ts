@@ -1,6 +1,8 @@
 // Barrel file for shared/reusable UI components.
 // Export components from this file as they are added, e.g.:
 // export { default as Button } from './Button';
+export { default as Logo } from './Logo';
+export { default as Header } from './Header';
 export { default as NewsCard } from './NewsCard';
 export { default as Skeleton } from './Skeleton';
 export { default as CardSkeleton } from './CardSkeleton';
