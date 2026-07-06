@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Header from '../components/Header'
 import HeroSection from '../components/HeroSection'
 import HeroSkeleton from '../components/HeroSkeleton'
 import NewsSection from '../components/NewsSection'
@@ -50,6 +51,8 @@ export default function HomePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-slate-900">
+      <Header />
+
       {isInitialLoading ? (
         <HeroSkeleton />
       ) : (
