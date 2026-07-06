@@ -29,7 +29,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import health, news, search
-from app.config import ALLOWED_ORIGINS, APP_VERSION, QDRANT_VECTOR_SIZE
+from app.config import ALLOWED_ORIGIN_REGEX, ALLOWED_ORIGINS, APP_VERSION, QDRANT_VECTOR_SIZE
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
 from app.database.postgres_news_repository import news_repository
@@ -90,6 +90,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=ALLOWED_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
