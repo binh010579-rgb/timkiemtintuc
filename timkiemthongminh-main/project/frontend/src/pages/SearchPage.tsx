@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import Header from '../components/Header'
 import SearchBar from '../components/SearchBar'
 import LatestNews from '../components/LatestNews'
 import TrendingTopics from '../components/TrendingTopics'
@@ -56,6 +57,8 @@ export default function SearchPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-white dark:bg-slate-900">
+      <Header />
+
       <section className="border-b border-slate-100 bg-gradient-to-b from-indigo-50 via-white to-white px-4 py-10 sm:py-14 dark:border-slate-800 dark:from-indigo-950/40 dark:via-slate-900 dark:to-slate-900">
         <div className="mx-auto max-w-4xl text-center">
           <Link
